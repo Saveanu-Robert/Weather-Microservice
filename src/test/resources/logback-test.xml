@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Console appender for test output -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Suppress error logs from WeatherApiClient during tests -->
+    <logger name="com.weatherspring.client.WeatherApiClient" level="OFF"/>
+
+    <!-- Suppress error logs from GlobalExceptionHandler during tests -->
+    <logger name="com.weatherspring.exception.GlobalExceptionHandler" level="OFF"/>
+
+    <!-- Keep service logs visible for debugging -->
+    <logger name="com.weatherspring.service" level="INFO"/>
+
+    <!-- Suppress Spring Boot startup noise -->
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="org.hibernate" level="WARN"/>
+
+    <!-- Root logger -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>

@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  weather-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: weather-microservice
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - WEATHER_API_KEY=${WEATHER_API_KEY:-your-api-key-here}
+      - DATABASE_URL=jdbc:h2:file:/data/weatherdb
+      - DATABASE_USERNAME=sa
+      - DATABASE_PASSWORD=
+    volumes:
+      - weather-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 60s
+    networks:
+      - weather-network
+
+volumes:
+  weather-data:
+    driver: local
+
+networks:
+  weather-network:
+    driver: bridge
