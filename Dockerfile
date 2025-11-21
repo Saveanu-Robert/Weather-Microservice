@@ -1,5 +1,5 @@
 # Multi-stage build for optimal image size
-FROM maven:3.9-eclipse-temurin-17 AS build
+FROM maven:3.9-eclipse-temurin-25 AS build
 
 WORKDIR /app
 
@@ -12,16 +12,21 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # Production stage
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 
 WORKDIR /app
 
 # Create non-root user for security
 RUN addgroup -S spring && adduser -S spring -G spring
-USER spring:spring
+
+# Create logs and data directories with proper ownership
+RUN mkdir -p /app/logs /data && chown -R spring:spring /app/logs /data
 
 # Copy jar from build stage
 COPY --from=build /app/target/*.jar app.jar
+
+# Switch to non-root user
+USER spring:spring
 
 # Expose application port
 EXPOSE 8080
