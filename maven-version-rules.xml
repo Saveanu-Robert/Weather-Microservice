@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset comparisonMethod="maven"
+         xmlns="http://mojo.codehaus.org/versions-maven-plugin/rule/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://mojo.codehaus.org/versions-maven-plugin/rule/2.0.0
+                             https://www.mojohaus.org/versions-maven-plugin/xsd/rule-2.0.0.xsd">
+
+  <!-- Global rules for all dependencies -->
+  <rules>
+    <!-- Ignore alpha, beta, and RC versions -->
+    <rule groupId="*" comparisonMethod="maven">
+      <ignoreVersions>
+        <ignoreVersion type="regex">.*[-\.]alpha[-\.]?[0-9]*</ignoreVersion>
+        <ignoreVersion type="regex">.*[-\.]beta[-\.]?[0-9]*</ignoreVersion>
+        <ignoreVersion type="regex">.*[-\.]rc[-\.]?[0-9]*</ignoreVersion>
+        <ignoreVersion type="regex">.*[-\.]CR[-\.]?[0-9]*</ignoreVersion>
+        <ignoreVersion type="regex">.*[-\.]M[0-9]+</ignoreVersion>
+        <ignoreVersion type="regex">.*[-\.]SNAPSHOT</ignoreVersion>
+      </ignoreVersions>
+    </rule>
+  </rules>
+
+  <!-- Specific rules for individual dependencies -->
+  <rules>
+    <!-- Spring Boot: Use only release versions -->
+    <rule groupId="org.springframework.boot">
+      <ignoreVersions>
+        <ignoreVersion type="regex">.*[-\.]M[0-9]+</ignoreVersion>
+        <ignoreVersion type="regex">.*[-\.]RC[0-9]+</ignoreVersion>
+        <ignoreVersion type="regex">.*[-\.]SNAPSHOT</ignoreVersion>
+      </ignoreVersions>
+    </rule>
+
+    <!-- Java version compatibility: Match Java 21+ -->
+    <rule groupId="org.springframework">
+      <ignoreVersions>
+        <ignoreVersion type="regex">.*[-\.]M[0-9]+</ignoreVersion>
+        <ignoreVersion type="regex">.*[-\.]RC[0-9]+</ignoreVersion>
+      </ignoreVersions>
+    </rule>
+
+    <!-- Allow all stable versions for testing frameworks -->
+    <rule groupId="org.junit.jupiter"/>
+    <rule groupId="org.mockito"/>
+    <rule groupId="org.assertj"/>
+  </rules>
+</ruleset>

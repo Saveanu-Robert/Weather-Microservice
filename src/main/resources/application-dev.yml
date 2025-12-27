@@ -1,0 +1,26 @@
+# Development Profile Configuration
+
+spring:
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update # Allow schema updates in dev
+
+  h2:
+    console:
+      enabled: true # Enable H2 console in development only
+      path: /h2-console
+
+logging:
+  level:
+    root: INFO
+    com.weatherspring: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+# Tracing - 100% sampling in dev
+management:
+  tracing:
+    sampling:
+      probability: 1.0 # Sample all requests in development

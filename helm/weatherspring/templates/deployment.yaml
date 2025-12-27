@@ -1,0 +1,172 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "weatherspring.fullname" . }}
+  labels:
+    {{- include "weatherspring.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "weatherspring.selectorLabels" . | nindent 6 }}
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        prometheus.io/port: {{ .Values.service.targetPort | quote }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "weatherspring.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "weatherspring.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: {{ .Chart.Name }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 12 }}
+        image: {{ include "weatherspring.image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.service.targetPort }}
+          protocol: TCP
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: {{ .Values.application.springProfile | quote }}
+        - name: SPRING_CONFIG_LOCATION
+          value: "file:/app/config/application.yml"
+        - name: WEATHER_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "weatherspring.fullname" . }}
+              key: weather-api-key
+        - name: DATABASE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "weatherspring.fullname" . }}
+              key: db-username
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "weatherspring.fullname" . }}
+              key: db-password
+        - name: JAVA_OPTS
+          value: "-Xms{{ .Values.javaOpts.xms }} {{ .Values.javaOpts.other }}"
+        {{- with .Values.extraEnv }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.extraEnvFrom }}
+        envFrom:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        livenessProbe:
+          {{- toYaml .Values.probes.liveness | nindent 10 }}
+        readinessProbe:
+          {{- toYaml .Values.probes.readiness | nindent 10 }}
+        startupProbe:
+          {{- toYaml .Values.probes.startup | nindent 10 }}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          mountPath: {{ .Values.persistence.mountPath }}
+        {{- end }}
+        - name: tmp
+          mountPath: /tmp
+        - name: logs
+          mountPath: /app/logs
+        {{- with .Values.extraVolumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.lifecycle }}
+        lifecycle:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- with .Values.extraContainers }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "weatherspring.fullname" . }}
+      {{- if .Values.persistence.enabled }}
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ include "weatherspring.fullname" . }}
+      {{- else }}
+      - name: data
+        emptyDir: {}
+      {{- end }}
+      - name: tmp
+        emptyDir: {}
+      - name: logs
+        emptyDir: {}
+      {{- with .Values.extraVolumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.affinity.podAntiAffinity.enabled }}
+      affinity:
+        podAntiAffinity:
+          {{- if eq .Values.affinity.podAntiAffinity.type "required" }}
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - {{ include "weatherspring.name" . }}
+            topologyKey: {{ .Values.affinity.podAntiAffinity.topologyKey }}
+          {{- else }}
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: {{ .Values.affinity.podAntiAffinity.weight }}
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                  - {{ include "weatherspring.name" . }}
+              topologyKey: {{ .Values.affinity.podAntiAffinity.topologyKey }}
+          {{- end }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

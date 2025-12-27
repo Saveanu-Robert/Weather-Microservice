@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 25
+      uses: actions/setup-java@v4
+      with:
+        java-version: '25'
+        distribution: 'oracle'
+        cache: maven
+
+    - name: Verify Java version
+      run: |
+        echo "Java version:"
+        java -version
+        echo ""
+        echo "Maven version:"
+        mvn -version
+
+    - name: Build and Test with Coverage
+      run: mvn clean verify
+
+    - name: Verify test execution
+      run: |
+        echo "======================================"
+        echo "Test Execution Verification"
+        echo "======================================"
+        echo "Test reports:"
+        ls -la target/surefire-reports/ || echo "No surefire reports found"
+        echo ""
+        echo "Test count:"
+        find target/surefire-reports -name "*.xml" -exec grep -h "testcase" {} \; | wc -l || echo "0"
+        echo ""
+        echo "JaCoCo files:"
+        ls -la target/jacoco.exec 2>/dev/null || echo "jacoco.exec not found"
+        ls -la target/site/jacoco/ 2>/dev/null || echo "jacoco report directory not found"
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: target/surefire-reports/
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage-report
+        path: target/site/jacoco/
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./target/site/jacoco/jacoco.xml
+        flags: unittests
+        name: codecov-weather-service
+        fail_ci_if_error: false
+        verbose: true
+
+    - name: Display coverage summary
+      run: |
+        # Display coverage from JaCoCo XML report (uses same exclusions as check goal)
+        python3 << 'EOF'
+        import xml.etree.ElementTree as ET
+
+        tree = ET.parse('target/site/jacoco/jacoco.xml')
+        root = tree.getroot()
+
+        line_counter = root.find('./counter[@type="LINE"]')
+        if line_counter is not None:
+            missed = int(line_counter.get('missed'))
+            covered = int(line_counter.get('covered'))
+            total = missed + covered
+            percentage = (covered * 100) // total if total > 0 else 0
+
+            print("=" * 38)
+            print("Code Coverage Report")
+            print("=" * 38)
+            print(f"Lines covered: {covered}")
+            print(f"Lines missed: {missed}")
+            print(f"Total lines: {total}")
+            print(f"Coverage: {percentage}%")
+            print("=" * 38)
+
+            if percentage >= 80:
+                print(f"✅ Coverage ({percentage}%) meets threshold (80%)")
+            else:
+                print(f"⚠️  Coverage ({percentage}%) is below threshold (80%)")
+        else:
+            print("Could not find LINE counter in JaCoCo report")
+        EOF
+
+    - name: Package application
+      run: mvn package -DskipTests
+
+    - name: Upload JAR artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: weather-service-jar
+        path: target/weather-service-*.jar
