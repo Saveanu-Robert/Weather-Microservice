@@ -1,0 +1,127 @@
+# Minikube-specific values for Windows
+# This configuration uses LoadBalancer service type which works better with Windows
+# Requires: minikube tunnel (runs automatically in deployment script)
+# Usage: helm install weatherspring ./helm/weatherspring -f helm/weatherspring/values-minikube-windows.yaml
+
+## Use LoadBalancer for automatic access via minikube tunnel
+## This eliminates the need for manual port-forwarding on Windows
+service:
+  type: LoadBalancer
+  port: 8080
+
+## Enable ingress with Minikube nginx controller (optional)
+ingress:
+  enabled: false  # Disabled by default, LoadBalancer is easier for Windows
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: weather.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+## Lower resource requirements for local development
+resources:
+  limits:
+    cpu: 500m
+    memory: 768Mi
+  requests:
+    cpu: 250m
+    memory: 384Mi
+
+## Reduce replicas for local testing
+replicaCount: 1
+
+## Use Recreate strategy for single replica with file-based H2 database
+## This prevents database lock issues by terminating old pod before starting new one
+strategy:
+  type: Recreate
+  # rollingUpdate must be null when type is Recreate
+  rollingUpdate: null
+
+## Disable autoscaling on Minikube (simpler for demo)
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+
+## Use development Spring profile
+application:
+  springProfile: "dev"
+
+## Development configuration
+config:
+  spring:
+    profiles:
+      active: dev
+    jpa:
+      showSql: true
+      hibernate:
+        ddlAuto: update  # Auto-update schema in dev mode
+    h2:
+      console:
+        enabled: true  # Enable H2 console for debugging
+
+  logging:
+    level:
+      root: INFO
+      com.weatherspring: DEBUG
+      org.springframework.web: DEBUG
+      org.hibernate: INFO
+
+  weather:
+    api:
+      timeout: 5000  # Shorter timeout for dev
+
+## Smaller PVC for local testing
+persistence:
+  enabled: true
+  size: 500Mi
+  storageClass: "standard"  # Minikube default storage class
+
+## Disable network policies for simpler local development
+networkPolicy:
+  enabled: false
+
+## Disable PDB for single replica setup
+podDisruptionBudget:
+  enabled: false
+
+## Faster startup times for development
+probes:
+  liveness:
+    initialDelaySeconds: 30  # Reduced from 60
+    periodSeconds: 10
+  readiness:
+    initialDelaySeconds: 15  # Reduced from 30
+    periodSeconds: 5
+  startup:
+    initialDelaySeconds: 5   # Reduced from 10
+    periodSeconds: 5
+    failureThreshold: 20     # Reduced from 30 (100s total)
+
+## Lower JVM heap for development (67% of container memory)
+javaOpts:
+  xms: "256m"
+  other: "-XX:+UseG1GC -XX:MaxRAMPercentage=67.0 -XX:InitialRAMPercentage=33.0 -Djava.security.egd=file:/dev/./urandom"
+
+## Disable pod anti-affinity (not needed for single node Minikube)
+affinity:
+  podAntiAffinity:
+    enabled: false
+
+## Zipkin configuration for Minikube
+zipkin:
+  enabled: true
+  service:
+    type: LoadBalancer  # Use LoadBalancer for easier access on Windows Minikube
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi

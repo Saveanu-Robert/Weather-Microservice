@@ -1,0 +1,101 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your release is named: {{ .Release.Name }}
+Deployed in namespace: {{ .Release.Namespace }}
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }}
+  $ helm get all {{ .Release.Name }}
+
+Application endpoints:
+
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  Ingress URL: http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ (index $host.paths 0).path }}
+{{- end }}
+
+  To access via ingress, ensure your hosts file is configured:
+  {{- $minikubeIP := "(minikube ip)" }}
+  Add to /etc/hosts or C:\Windows\System32\drivers\etc\hosts:
+  {{ $minikubeIP }} {{ (index .Values.ingress.hosts 0).host }}
+
+{{- else if eq .Values.service.type "NodePort" }}
+  NodePort URL: http://<NODE_IP>:{{ .Values.service.nodePort }}
+
+  For Minikube, get the service URL:
+  $ minikube service {{ include "weatherspring.fullname" . }} --url
+
+{{- else if eq .Values.service.type "LoadBalancer" }}
+  Get the LoadBalancer IP:
+  $ kubectl get svc {{ include "weatherspring.fullname" . }} -n {{ .Release.Namespace }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+
+  Then access: http://<LOAD_BALANCER_IP>:{{ .Values.service.port }}
+
+{{- else }}
+  ClusterIP: {{ include "weatherspring.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}
+
+  Forward port to access locally:
+  $ kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "weatherspring.fullname" . }} 8080:{{ .Values.service.port }}
+
+  Then access: http://localhost:8080
+
+{{- end }}
+
+Useful endpoints:
+
+  Health check:    /actuator/health
+  Metrics:         /actuator/metrics
+  Prometheus:      /actuator/prometheus
+  API Docs:        /swagger-ui.html
+  OpenAPI Spec:    /api-docs
+
+Example API calls:
+
+  # Add a location
+  $ curl -X POST <endpoint>/api/locations \
+      -H "Content-Type: application/json" \
+      -d '{"name":"London","country":"UK","latitude":51.5074,"longitude":-0.1278}'
+
+  # Get current weather
+  $ curl <endpoint>/api/weather/current?location=London
+
+  # Get forecast
+  $ curl <endpoint>/api/forecast?location=London&days=7
+
+{{- if not .Values.secrets.weatherApiKey }}
+
+WARNING: You have not set the WEATHER_API_KEY!
+The application will fail to start without a valid API key.
+
+To get a free API key, visit: https://www.weatherapi.com/
+Then upgrade your release with:
+
+  $ helm upgrade {{ .Release.Name }} weatherspring \
+      --set secrets.weatherApiKey=YOUR_API_KEY \
+      --reuse-values
+
+{{- end }}
+
+Verify deployment:
+
+  # Check pod status
+  $ kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "weatherspring.name" . }}
+
+  # View logs
+  $ kubectl logs -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "weatherspring.name" . }} --tail=100
+
+{{- if .Values.autoscaling.enabled }}
+  # Check HPA status
+  $ kubectl get hpa -n {{ .Release.Namespace }} {{ include "weatherspring.fullname" . }}
+{{- end }}
+
+{{- if .Values.persistence.enabled }}
+  # Check PVC status
+  $ kubectl get pvc -n {{ .Release.Namespace }} {{ include "weatherspring.fullname" . }}
+{{- end }}
+
+  # Run Helm test
+  $ helm test {{ .Release.Name }}
+
+For more information, see the chart README.

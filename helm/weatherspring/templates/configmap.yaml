@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "weatherspring.fullname" . }}
+  labels:
+    {{- include "weatherspring.labels" . | nindent 4 }}
+data:
+  # Spring Boot Application Configuration
+  application.yml: |
+    spring:
+      application:
+        name: weather-service
+      profiles:
+        active: {{ .Values.config.spring.profiles.active }}
+      jpa:
+        show-sql: {{ .Values.config.spring.jpa.showSql }}
+        hibernate:
+          ddl-auto: {{ .Values.config.spring.jpa.hibernate.ddlAuto }}
+        properties:
+          hibernate:
+            format_sql: false
+            dialect: org.hibernate.dialect.H2Dialect
+      h2:
+        console:
+          enabled: {{ .Values.config.spring.h2.console.enabled }}
+          path: /h2-console
+          settings:
+            web-allow-others: false
+      flyway:
+        enabled: {{ .Values.config.spring.flyway.enabled }}
+        baseline-on-migrate: {{ .Values.config.spring.flyway.baselineOnMigrate }}
+        locations: {{ .Values.config.spring.flyway.locations }}
+      datasource:
+        url: jdbc:h2:file:{{ .Values.persistence.mountPath }}/weatherdb
+        driver-class-name: org.h2.Driver
+      cache:
+        type: {{ .Values.config.cache.type }}
+        caffeine:
+          spec: {{ .Values.config.cache.caffeine.spec }}
+
+    server:
+      port: {{ .Values.service.targetPort }}
+      servlet:
+        context-path: /
+      shutdown: {{ .Values.config.server.shutdown }}
+      error:
+        include-stacktrace: {{ .Values.config.server.error.includeStacktrace }}
+        include-message: {{ .Values.config.server.error.includeMessage }}
+
+    management:
+      endpoints:
+        web:
+          exposure:
+            include: {{ .Values.config.management.endpoints.web.exposure.include }}
+      endpoint:
+        health:
+          show-details: {{ .Values.config.management.endpoint.health.showDetails }}
+      metrics:
+        export:
+          prometheus:
+            enabled: {{ .Values.config.management.metrics.export.prometheus.enabled }}
+      {{- if .Values.tracing.enabled }}
+      tracing:
+        sampling:
+          probability: {{ .Values.tracing.sampleRate }}
+      zipkin:
+        tracing:
+          endpoint: http://{{ include "weatherspring.fullname" . }}-zipkin:9411/api/v2/spans
+      {{- end }}
+
+    # Weather API Configuration
+    weather:
+      api:
+        base-url: {{ .Values.config.weather.api.baseUrl }}
+        timeout: {{ .Values.config.weather.api.timeout }}
+        cache:
+          current-weather-ttl: {{ .Values.config.weather.api.cache.currentWeatherTtl }}
+          forecast-ttl: {{ .Values.config.weather.api.cache.forecastTtl }}
+          location-ttl: {{ .Values.config.weather.api.cache.locationTtl }}
+
+    # Logging Configuration
+    logging:
+      level:
+        root: {{ .Values.config.logging.level.root }}
+        com.weatherspring: {{ index .Values.config.logging.level "com.weatherspring" }}
+        org.springframework: {{ index .Values.config.logging.level "org.springframework" }}
+        org.hibernate: {{ index .Values.config.logging.level "org.hibernate" }}
+      pattern:
+        console: {{ .Values.config.logging.pattern.console | quote }}
+
+    # API Documentation
+    springdoc:
+      api-docs:
+        path: /api-docs
+      swagger-ui:
+        path: /swagger-ui.html
+        enabled: true

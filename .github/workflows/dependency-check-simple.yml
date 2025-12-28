@@ -1,0 +1,46 @@
+name: Daily Dependency Check (Simple)
+
+on:
+  schedule:
+    - cron: '0 9 * * *'  # 9:00 AM UTC daily
+  workflow_dispatch:
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Check dependencies
+        run: |
+          echo "Checking for dependency updates..."
+          mvn versions:display-dependency-updates -DprocessDependencyManagement=false > updates.log
+          mvn versions:display-plugin-updates >> updates.log
+          cat updates.log
+
+      - name: Check if updates found
+        run: |
+          if grep -q '\->' updates.log; then
+            echo "⚠️ UPDATES AVAILABLE ⚠️"
+            echo "Updates found in dependencies or plugins"
+            cat updates.log
+            exit 1
+          else
+            echo "✅ All dependencies up to date"
+          fi
+
+      - name: Upload log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-updates-log
+          path: updates.log
