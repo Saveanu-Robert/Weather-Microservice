@@ -43,10 +43,10 @@ spring:
         web-allow-others: false
 
   datasource:
-    url: jdbc:h2:file:./data/weatherdb;AUTO_SERVER=TRUE
+    url: ${DATABASE_URL:jdbc:h2:file:./data/weatherdb;AUTO_SERVER=TRUE}
     driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    username: ${DATABASE_USERNAME:sa}
+    password: ${DATABASE_PASSWORD:}
 
   cache:
     type: caffeine

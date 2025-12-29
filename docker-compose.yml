@@ -14,7 +14,7 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       - WEATHER_API_KEY=${WEATHER_API_KEY}
       - SERVER_PORT=${APP_PORT:-8080}
-      - DATABASE_URL=jdbc:h2:file:/data/weatherdb
+      - DATABASE_URL=jdbc:h2:file:/data/weatherdb;AUTO_SERVER=FALSE
       - DATABASE_USERNAME=sa
       - DATABASE_PASSWORD=
       - TRACING_SAMPLE_RATE=${TRACING_SAMPLE_RATE:-1.0}
