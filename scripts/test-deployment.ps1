@@ -320,7 +320,7 @@ if (-not $parisId) {
         country = "France"
         latitude = 48.8566
         longitude = 2.3522
-        region = "Île-de-France"
+        region = "Ile-de-France"
     }
 
     Write-Info "`nTesting: Create Location (Paris)"

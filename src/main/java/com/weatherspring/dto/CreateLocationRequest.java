@@ -25,4 +25,4 @@ public record CreateLocationRequest(
     @ValidLongitude
         @Schema(description = "Longitude coordinate", example = "2.3522", required = true)
         Double longitude,
-    @Schema(description = "Region/State", example = "Île-de-France") String region) {}
+    @Schema(description = "Region/State", example = "Ile-de-France") String region) {}
