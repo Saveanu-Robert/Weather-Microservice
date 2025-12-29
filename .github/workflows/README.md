@@ -1,37 +1,54 @@
 # GitHub Actions Workflows
 
-## Dependency Management
+This directory contains automated workflows for the Weather Microservice project.
 
-### Daily Dependency Check (Simple)
-**File:** `dependency-check-simple.yml`
+## Active Workflows
 
-Runs every day at 9:00 AM UTC to check for dependency updates.
+### CI Pipeline (`ci.yml`)
+Runs on every push and pull request to validate code quality and functionality.
 
-**What it does:**
-- Checks all Maven dependencies and plugins for updates
-- Fails the workflow if updates are available (red X in Actions tab)
-- Uploads a detailed log file with all available updates
+**Triggers:**
+- Push to any branch
+- Pull requests
 
-**How to use:**
-- Check the Actions tab daily for red X markers
-- Download the artifact to see what needs updating
-- Manually trigger: Go to Actions → Daily Dependency Check (Simple) → Run workflow
+**Actions:**
+- Builds the project with Maven
+- Runs all tests (unit and integration)
+- Generates code coverage reports (JaCoCo)
+- Runs Checkstyle and Spotless code quality checks
+- Uploads test and coverage reports as artifacts
 
-### Daily Dependency Check (Full)
-**File:** `dependency-updates.yml`
+### Dependency Updates (`dependency-updates.yml`)
+Automatically checks for and updates Maven dependencies daily.
 
-More comprehensive workflow that creates GitHub issues when updates are found.
+**Triggers:**
+- Daily at 9:00 AM UTC (cron: `0 9 * * *`)
+- Manual trigger via workflow_dispatch
 
-**What it does:**
+**Actions:**
 - Checks for dependency and plugin updates
-- Generates a formatted report
-- Creates a GitHub issue with update details (requires repository permissions)
-- Updates existing issue if already open
+- Updates dependencies to latest stable versions (excludes major version bumps)
+- Verifies the build still works
+- Creates a Pull Request with the changes if updates are available
 
-**Setup:**
-- Ensure repository has "Read and write permissions" for workflows
-  - Go to Settings → Actions → General → Workflow permissions
-  - Select "Read and write permissions"
+**Configuration:**
+- Uses `maven-version-rules.xml` to filter out alpha, beta, RC, and snapshot versions
+- Only suggests stable release versions
+- Labels PRs with `dependencies` and `automated`
+
+**Manual Trigger:**
+You can manually trigger this workflow from the GitHub Actions tab.
+
+### Dependabot Auto-Merge (`dependabot-auto-merge.yml`)
+Automatically merges Dependabot PRs for patch and minor updates after CI passes.
+
+**Triggers:**
+- Dependabot pull requests
+
+**Actions:**
+- Waits for CI pipeline to complete
+- Auto-merges patch and minor version updates
+- Requires manual review for major version updates
 
 ## Manual Dependency Updates
 
@@ -59,3 +76,9 @@ All versions are managed in `pom.xml` properties section for easy updates:
 - ... and more
 
 Update any version by changing the property value in `pom.xml`.
+
+## Workflow Permissions
+
+All workflows use minimal required permissions:
+- `dependency-updates.yml`: Requires `contents: write` and `pull-requests: write` to create PRs
+- Other workflows: Read-only access unless explicitly specified
