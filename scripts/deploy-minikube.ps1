@@ -51,17 +51,29 @@ if ($missing.Count -gt 0) {
 # Check/Start Minikube
 Write-Info "`nChecking Minikube..."
 
-$minikubeStatus = minikube status --format='{{.Host}}' 2>&1
-if ($minikubeStatus -ne "Running") {
-    Write-Warning "  Minikube not running. Starting it now..."
-    minikube start --cpus=4 --memory=8192
+try {
+    $minikubeStatus = minikube status --format='{{.Host}}' 2>&1
+    if ($LASTEXITCODE -eq 0 -and $minikubeStatus -eq "Running") {
+        Write-Success "  Minikube is running"
+    } else {
+        Write-Warning "  Minikube not running. Starting it now..."
+        Write-Info "  This may take a few minutes..."
+        minikube start --driver=docker --cpus=4 --memory=8192
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to start Minikube"
+            exit 1
+        }
+        Write-Success "  Minikube started"
+    }
+} catch {
+    Write-Warning "  Minikube cluster doesn't exist. Creating it now..."
+    Write-Info "  This may take a few minutes..."
+    minikube start --driver=docker --cpus=4 --memory=8192
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "Failed to start Minikube"
+        Write-Error "Failed to create Minikube cluster"
         exit 1
     }
-    Write-Success "  Minikube started"
-} else {
-    Write-Success "  Minikube is running"
+    Write-Success "  Minikube cluster created and started"
 }
 
 # Enable addons
