@@ -1,0 +1,233 @@
+spring:
+  application:
+    name: weather-service
+
+  # Handles 10,000+ concurrent requests vs 200 with platform threads
+  threads:
+    virtual:
+      enabled: true
+
+  profiles:
+    active: dev
+
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+
+  # Flyway Database Migrations
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+  h2:
+    console:
+      enabled: false
+      path: /h2-console
+      settings:
+        web-allow-others: false
+
+  datasource:
+    url: jdbc:h2:file:./data/weatherdb;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    password:
+
+  cache:
+    type: caffeine
+    # Different TTL per cache type (currentWeather: 5min, forecasts: 1h, locations: 15min)
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  shutdown: graceful
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain,application/javascript,text/css
+    min-response-size: 1024
+
+# Spring Lifecycle Configuration
+spring.lifecycle:
+  timeout-per-shutdown-phase: 30s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,circuitbreakers,circuitbreakerevents,shutdown
+      base-path: /actuator
+    enabled-by-default: false
+  endpoint:
+    health:
+      enabled: true
+      show-details: when-authorized
+      roles: ACTUATOR_ADMIN
+    info:
+      enabled: true
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+    shutdown:
+      enabled: true
+    circuitbreakers:
+      enabled: true
+    circuitbreakerevents:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+      environment: ${spring.profiles.active}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  health:
+    circuitbreakers:
+      enabled: true
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLE_RATE:0.1}
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
+
+# Resilience4j Circuit Breaker Configuration
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        failureRateThreshold: 50
+        minimumNumberOfCalls: 5
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        slidingWindowSize: 10
+        slidingWindowType: COUNT_BASED
+        slowCallRateThreshold: 60
+        slowCallDurationThreshold: 3s
+        recordExceptions:
+          - com.weatherspring.exception.WeatherApiException
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+    instances:
+      weatherApi:
+        baseConfig: default
+        failureRateThreshold: 50
+        waitDurationInOpenState: 15s
+        minimumNumberOfCalls: 10
+      weatherApiCurrent:
+        baseConfig: default
+        failureRateThreshold: 50
+        waitDurationInOpenState: 15s
+        minimumNumberOfCalls: 10
+      weatherApiForecast:
+        baseConfig: default
+        failureRateThreshold: 50
+        waitDurationInOpenState: 20s
+        minimumNumberOfCalls: 10
+        slowCallDurationThreshold: 5s
+
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 1s
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        retryExceptions:
+          - com.weatherspring.exception.WeatherApiException
+          - java.io.IOException
+    instances:
+      weatherApi:
+        baseConfig: default
+        maxAttempts: 3
+        waitDuration: 500ms
+      weatherApiCurrent:
+        baseConfig: default
+        maxAttempts: 3
+        waitDuration: 500ms
+      weatherApiForecast:
+        baseConfig: default
+        maxAttempts: 2
+        waitDuration: 1s
+
+  ratelimiter:
+    configs:
+      default:
+        limitForPeriod: 100
+        limitRefreshPeriod: 1m
+        timeoutDuration: 5s
+    instances:
+      weatherApi:
+        baseConfig: default
+        limitForPeriod: 50
+        limitRefreshPeriod: 1m
+      weatherApiCurrent:
+        baseConfig: default
+        limitForPeriod: 50
+        limitRefreshPeriod: 1m
+      weatherApiForecast:
+        baseConfig: default
+        limitForPeriod: 30
+        limitRefreshPeriod: 1m
+
+# Weather API Configuration
+weather:
+  api:
+    base-url: https://api.weatherapi.com/v1
+    key: ${WEATHER_API_KEY}
+    timeout: 5000
+    cache:
+      current-weather-ttl: 300
+      forecast-ttl: 3600
+      location-ttl: 900
+
+# Application Error Configuration
+app:
+  async:
+    timeout-seconds: 60
+  error:
+    problem-base-url: ${ERROR_PROBLEM_BASE_URL:https://weatherspring.com/problems}
+
+# Logging Configuration with Correlation ID
+logging:
+  level:
+    root: INFO
+    com.weatherspring: DEBUG
+    org.springframework.web: INFO
+    org.hibernate: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%X{correlationId:-}] [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%X{correlationId:-}] [%thread] %-5level %logger{36} - %msg%n"
+
+# API Documentation
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+# OpenAPI Configuration
+openapi:
+  contact:
+    email: ${OPENAPI_CONTACT_EMAIL:support@weatherservice.com}
+  server:
+    url: ${OPENAPI_SERVER_URL:http://localhost:8080}
+
+# Thread Pool Configuration
+thread-pool:
+  platform:
+    core-pool-size: ${PLATFORM_EXECUTOR_CORE_POOL_SIZE:10}
+    max-pool-size: ${PLATFORM_EXECUTOR_MAX_POOL_SIZE:50}
+    queue-capacity: ${PLATFORM_EXECUTOR_QUEUE_CAPACITY:500}
+    await-termination-seconds: ${PLATFORM_EXECUTOR_AWAIT_TERMINATION:30}

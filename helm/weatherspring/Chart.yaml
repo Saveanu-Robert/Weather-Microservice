@@ -1,0 +1,17 @@
+apiVersion: v2
+name: weatherspring
+description: Helm chart for WeatherSpring microservice - Spring Boot weather API with H2 database
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - weather
+  - spring-boot
+  - microservice
+  - rest-api
+  - java
+home: https://github.com/Saveanu-Robert/Weather-Microservice
+sources:
+  - https://github.com/Saveanu-Robert/Weather-Microservice
+maintainers:
+  - name: Robert Saveanu

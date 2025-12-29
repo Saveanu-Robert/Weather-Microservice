@@ -1,0 +1,12 @@
+# Test configuration
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  mvc:
+    throw-exception-if-no-handler-found: true
+    problemdetails:
+      enabled: true
+
+app:
+  error:
+    problem-base-url: https://api.weather.example.com/errors

@@ -1,0 +1,32 @@
+spring:
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+
+  h2:
+    console:
+      enabled: false
+
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  cache:
+    type: none
+
+logging:
+  level:
+    root: WARN
+    com.weatherspring: INFO
+
+weather:
+  api:
+    base-url: http://localhost:8080/mock
+    key: test-api-key
+    timeout: 1000

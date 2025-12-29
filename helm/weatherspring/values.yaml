@@ -1,0 +1,468 @@
+# Default values for weatherspring
+# This is a YAML-formatted file optimized for production deployment but works on Minikube
+# Declare variables to be passed into your templates.
+
+## Application metadata
+application:
+  version: "1.0.0"
+  springProfile: "prod"  # Spring profile to activate (dev, test, prod)
+
+## Docker image configuration
+image:
+  repository: weatherspring/weather-service
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+## ServiceAccount configuration
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+  # Disable service account token automounting for security (app doesn't need K8s API access)
+  automountServiceAccountToken: false
+
+## Pod annotations
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/actuator/prometheus"
+  # Note: prometheus.io/port is set in deployment template to use service.targetPort
+
+## Pod labels (additional custom labels for pods)
+podLabels: {}
+
+## Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+## Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+
+## Service configuration
+service:
+  type: ClusterIP  # Change to NodePort for direct Minikube access
+  port: 8080
+  targetPort: 8080
+  # NodePort is only used when service.type=NodePort
+  nodePort: 30080
+  annotations: {}
+  # Session affinity for sticky sessions (None or ClientIP)
+  sessionAffinity: ""
+  # Session affinity config (only used if sessionAffinity: ClientIP)
+  sessionAffinityConfig: {}
+  #   clientIP:
+  #     timeoutSeconds: 10800
+  # ClusterIP address (optional, leave empty for auto-assignment)
+  clusterIP: ""
+
+## Ingress configuration
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"  # For production with TLS
+  hosts:
+    - host: weather.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  # - secretName: weather-tls
+  #   hosts:
+  #     - weather.local
+
+## Resource limits and requests
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+## Horizontal Pod Autoscaler configuration
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  # targetMemoryUtilizationPercentage: 80
+  # Optional: Advanced behavior configuration
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30
+        - type: Pods
+          value: 2
+          periodSeconds: 30
+      selectPolicy: Max
+
+## Manual replica count (only used if autoscaling.enabled=false)
+replicaCount: 2
+
+## Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+  # maxUnavailable: 1  # Alternative to minAvailable
+
+## Network Policy
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+  # Namespace selector for ingress controller (allows traffic from ingress-nginx namespace)
+  # Adjust based on your ingress controller namespace labels
+  ingressNamespaceSelector:
+    kubernetes.io/metadata.name: ingress-nginx
+  # Additional ingress rules (default allows from ingress-nginx)
+  extraIngressRules: []
+  # Additional egress rules (default allows DNS and HTTPS)
+  extraEgressRules: []
+
+## Persistence configuration for H2 database
+persistence:
+  enabled: true
+  # Storage class for PVC (use "standard" for Minikube, customize for production)
+  storageClass: "standard"
+  accessMode: ReadWriteOnce
+  size: 1Gi
+  annotations: {}
+  # Mount path for H2 database files
+  mountPath: /data
+
+## Application configuration (mapped to ConfigMap)
+config:
+  # Spring Boot configuration
+  spring:
+    profiles:
+      active: prod
+    jpa:
+      showSql: false
+      hibernate:
+        ddlAuto: validate  # Use validate in production with Flyway
+    h2:
+      console:
+        enabled: false  # Disable H2 console in production for security
+    flyway:
+      enabled: true
+      baselineOnMigrate: true
+      locations: "classpath:db/migration"
+
+  # Weather API configuration
+  weather:
+    api:
+      baseUrl: "https://api.weatherapi.com/v1"
+      timeout: 10000  # 10 seconds timeout for production
+      cache:
+        currentWeatherTtl: 300    # 5 minutes
+        forecastTtl: 3600          # 1 hour
+        locationTtl: 900           # 15 minutes
+
+  # Cache configuration (Caffeine)
+  cache:
+    type: caffeine
+    caffeine:
+      spec: "maximumSize=500,expireAfterWrite=300s"
+
+  # Logging configuration
+  logging:
+    level:
+      root: INFO
+      com.weatherspring: INFO
+      org.springframework: WARN
+      org.hibernate: WARN
+    pattern:
+      console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+  # Server configuration
+  server:
+    shutdown: graceful
+    error:
+      includeStacktrace: never
+      includeMessage: never
+
+  # Spring Boot Actuator configuration
+  management:
+    endpoints:
+      web:
+        exposure:
+          include: "health,info,metrics,prometheus"
+    endpoint:
+      health:
+        showDetails: when-authorized
+    metrics:
+      export:
+        prometheus:
+          enabled: true
+
+## Metrics and monitoring configuration
+metrics:
+  # Prometheus ServiceMonitor (requires Prometheus Operator)
+  # Automatically configures Prometheus to scrape metrics from the application
+  serviceMonitor:
+    enabled: false  # Set to true if using Prometheus Operator
+    # Scrape interval
+    interval: 30s
+    # Scrape timeout
+    scrapeTimeout: 10s
+    # Additional labels for ServiceMonitor (used by Prometheus to discover targets)
+    labels: {}
+    #   prometheus: kube-prometheus
+    # Additional annotations for ServiceMonitor
+    annotations: {}
+    # Relabeling configs to apply to samples before ingestion
+    relabelings: []
+    # - sourceLabels: [__meta_kubernetes_pod_name]
+    #   targetLabel: pod
+    # Metric relabeling configs to apply to samples before ingestion
+    metricRelabelings: []
+    # - sourceLabels: [__name__]
+    #   regex: 'go_.*'
+    #   action: drop
+
+## Distributed Tracing with Zipkin
+zipkin:
+  # Enable Zipkin deployment
+  enabled: true
+  # Zipkin image
+  image:
+    repository: openzipkin/zipkin
+    tag: latest
+    pullPolicy: IfNotPresent
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 9411
+    # For Minikube access, set type: NodePort and uncomment:
+    # nodePort: 30411
+  # Resource limits
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  # Probes
+  probes:
+    liveness:
+      httpGet:
+        path: /health
+        port: 9411
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    readiness:
+      httpGet:
+        path: /health
+        port: 9411
+      initialDelaySeconds: 10
+      periodSeconds: 5
+
+## Tracing configuration for weather-service
+tracing:
+  enabled: true
+  # Sample rate: 0.0 (disabled) to 1.0 (100% of requests)
+  sampleRate: 1.0
+
+## Secrets (sensitive data)
+secrets:
+  # Weather API key - REQUIRED
+  # Set via: --set secrets.weatherApiKey=<your-key>
+  # Or use external secret management (Sealed Secrets, External Secrets Operator, etc.)
+  weatherApiKey: ""
+
+  # Database credentials for H2
+  database:
+    username: "sa"
+    password: ""  # Empty password for H2
+
+## Java Virtual Machine options
+javaOpts:
+  # Initial heap size
+  xms: "512m"
+  # Use MaxRAMPercentage for automatic heap sizing (recommended)
+  # MaxRAMPercentage will auto-calculate max heap as 75% of container memory
+  # This is better than hardcoded -Xmx as it adapts to resource limits
+  # Additional JVM options
+  other: "-XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0 -XX:+UseStringDeduplication -Djava.security.egd=file:/dev/./urandom"
+
+## Probes configuration
+probes:
+  liveness:
+    httpGet:
+      path: /actuator/health/liveness
+      port: http  # References the named port from container ports
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  readiness:
+    httpGet:
+      path: /actuator/health/readiness
+      port: http  # References the named port from container ports
+    initialDelaySeconds: 30
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  startup:
+    httpGet:
+      path: /actuator/health
+      port: http  # References the named port from container ports
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 30  # 150 seconds max startup time
+
+## Pod affinity and anti-affinity
+affinity:
+  podAntiAffinity:
+    enabled: true
+    # Type: "preferred" (soft) or "required" (hard)
+    type: preferred
+    # Weight for preferred anti-affinity (1-100)
+    weight: 100
+    # Topology key for spreading pods
+    topologyKey: kubernetes.io/hostname
+
+## Topology spread constraints for even pod distribution
+# More advanced than anti-affinity, allows fine-grained control over pod distribution
+topologySpreadConstraints: []
+# Example: Spread pods evenly across availability zones
+# - maxSkew: 1
+#   topologyKey: topology.kubernetes.io/zone
+#   whenUnsatisfiable: DoNotSchedule
+#   labelSelector:
+#     matchLabels:
+#       app.kubernetes.io/name: weatherspring
+# - maxSkew: 1
+#   topologyKey: kubernetes.io/hostname
+#   whenUnsatisfiable: ScheduleAnyway
+#   labelSelector:
+#     matchLabels:
+#       app.kubernetes.io/name: weatherspring
+
+## Node selector
+nodeSelector: {}
+
+## Tolerations
+tolerations: []
+
+## Deployment strategy
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+## Deployment configuration
+# Number of old ReplicaSets to retain for rollback
+revisionHistoryLimit: 3
+
+# Graceful shutdown period (seconds) - allows in-flight requests to complete
+terminationGracePeriodSeconds: 60
+
+# Priority class name for pod scheduling (optional)
+# Use this to prioritize critical workloads in resource-constrained clusters
+priorityClassName: ""
+
+## Lifecycle hooks
+lifecycle:
+  preStop:
+    exec:
+      # Sleep before shutdown to allow graceful connection draining
+      command: ["/bin/sh", "-c", "sleep 10"]
+
+## Init containers (run before main container starts)
+# Useful for setup tasks, waiting for dependencies, database migrations, etc.
+initContainers: []
+# Example: Wait for database to be ready
+# - name: wait-for-db
+#   image: busybox:1.36
+#   command: ['sh', '-c', 'echo Waiting for database && sleep 10']
+# Example: Download configuration
+# - name: config-downloader
+#   image: curlimages/curl:8.4.0
+#   command: ['sh', '-c', 'curl -o /config/app.conf https://config-server/app.conf']
+#   volumeMounts:
+#   - name: config
+#     mountPath: /config
+
+## Additional containers (sidecars running alongside main container)
+# Useful for logging agents, proxies, monitoring agents, etc.
+extraContainers: []
+# Example: Logging sidecar
+# - name: log-forwarder
+#   image: fluentd:v1.16
+#   volumeMounts:
+#   - name: logs
+#     mountPath: /app/logs
+#     readOnly: true
+# Example: Cloud SQL Proxy
+# - name: cloud-sql-proxy
+#   image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.8.0
+#   args:
+#   - "--structured-logs"
+#   - "--port=5432"
+#   - "project:region:instance"
+
+## Additional volumes
+extraVolumes: []
+# - name: custom-config
+#   configMap:
+#     name: custom-config
+
+## Additional volume mounts
+extraVolumeMounts: []
+# - name: custom-config
+#   mountPath: /app/config
+#   readOnly: true
+
+## Additional environment variables
+extraEnv: []
+# - name: CUSTOM_VAR
+#   value: "custom-value"
+
+## Additional environment variables from ConfigMap/Secret
+extraEnvFrom: []
+# - configMapRef:
+#     name: special-config
+# - secretRef:
+#     name: special-secret

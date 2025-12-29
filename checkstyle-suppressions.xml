@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<suppressions>
+    <!-- Suppress method name check in test files (allow snake_case test names) -->
+    <suppress checks="MethodName" files=".*Test\.java$"/>
+
+    <!-- Suppress custom import order check (Spotless handles imports) -->
+    <suppress checks="CustomImportOrder"/>
+
+    <!-- Suppress missing Javadoc for private methods -->
+    <suppress checks="MissingJavadocMethod" message=".*private.*"/>
+
+    <!-- Suppress Javadoc for test methods and classes -->
+    <suppress checks="MissingJavadocMethod" files=".*Test\.java$"/>
+    <suppress checks="MissingJavadocMethod" files=".*/test/.*\.java$"/>
+    <suppress checks="MissingJavadocType" files=".*Test\.java$"/>
+    <suppress checks="MissingJavadocType" files=".*/test/.*\.java$"/>
+
+    <!-- Suppress Javadoc for DTOs, models, configs (including record components) -->
+    <suppress checks="MissingJavadocType" files=".*/dto/.*\.java$"/>
+    <suppress checks="MissingJavadocMethod" files=".*/dto/.*\.java$"/>
+    <suppress checks="MissingJavadocType" files=".*/model/.*\.java$"/>
+    <suppress checks="MissingJavadocMethod" files=".*/model/.*\.java$"/>
+    <suppress checks="MissingJavadocType" files=".*/config/.*\.java$"/>
+    <suppress checks="MissingJavadocType" files=".*/annotation/.*\.java$"/>
+    <suppress checks="MissingJavadocType" files=".*/validation/.*\.java$"/>
+
+    <!-- Suppress star imports in test files (idiomatic for test utilities) -->
+    <suppress checks="AvoidStarImport" files=".*Test\.java$"/>
+    <suppress checks="AvoidStarImport" files=".*/test/.*\.java$"/>
+
+    <!-- Suppress line length for import statements -->
+    <suppress checks="LineLength" message=".*import .*"/>
+
+    <!-- Suppress variable declaration distance in tests (setup methods can be long) -->
+    <suppress checks="VariableDeclarationUsageDistance" files=".*Test\.java$"/>
+    <suppress checks="VariableDeclarationUsageDistance" files=".*/test/.*\.java$"/>
+
+    <!-- Suppress single-statement blocks without braces (common Java pattern) -->
+    <suppress checks="NeedBraces"/>
+
+    <!-- Suppress variable declaration distance in complex setup methods -->
+    <suppress checks="VariableDeclarationUsageDistance"/>
+
+    <!-- Suppress abbreviation rules (ID, DTO, API are common) -->
+    <suppress checks="AbbreviationAsWordInName"/>
+
+    <!-- Suppress overload methods order (auto-generated code) -->
+    <suppress checks="OverloadMethodsDeclarationOrder"/>
+
+    <!-- Suppress line length for long URLs, annotations, and Javadoc -->
+    <suppress checks="LineLength"/>
+</suppressions>
