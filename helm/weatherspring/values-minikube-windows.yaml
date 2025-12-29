@@ -93,15 +93,29 @@ podDisruptionBudget:
 ## Faster startup times for development
 probes:
   liveness:
+    httpGet:
+      path: /actuator/health/liveness
+      port: http
     initialDelaySeconds: 30  # Reduced from 60
     periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
   readiness:
+    httpGet:
+      path: /actuator/health/readiness
+      port: http
     initialDelaySeconds: 15  # Reduced from 30
     periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
   startup:
+    httpGet:
+      path: /actuator/health
+      port: http
     initialDelaySeconds: 5   # Reduced from 10
     periodSeconds: 5
-    failureThreshold: 20     # Reduced from 30 (100s total)
+    timeoutSeconds: 3
+    failureThreshold: 30     # 150s max startup time (increased for slower Windows environments)
 
 ## Lower JVM heap for development (67% of container memory)
 javaOpts:

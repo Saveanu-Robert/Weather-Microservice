@@ -135,17 +135,25 @@ if ($existing) {
     helm upgrade weatherspring ./helm/weatherspring `
         -f $valuesFile `
         --set secrets.weatherApiKey=$ApiKey `
+        --timeout 10m `
         --wait
 } else {
     Write-Info "  Installing new release..."
     helm install weatherspring ./helm/weatherspring `
         -f $valuesFile `
         --set secrets.weatherApiKey=$ApiKey `
+        --timeout 10m `
         --wait
 }
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Helm deployment failed"
+    Write-Info "`nChecking pod status..."
+    kubectl get pods -l app.kubernetes.io/name=weatherspring
+    Write-Info "`nPod events:"
+    kubectl get events --sort-by='.lastTimestamp' | Select-Object -Last 20
+    Write-Info "`nPod logs (if available):"
+    kubectl logs -l app.kubernetes.io/name=weatherspring --tail=50 2>&1 | Out-Null
     exit 1
 }
 Write-Success "  Helm deployment complete"
