@@ -127,6 +127,13 @@ affinity:
   podAntiAffinity:
     enabled: false
 
+## Additional environment variables for Minikube
+extraEnv:
+  - name: OPENAPI_SERVER_URL
+    value: "http://localhost:8080"
+  - name: OPENAPI_CONTACT_EMAIL
+    value: "support@weatherservice.com"
+
 ## Zipkin configuration for Minikube
 zipkin:
   enabled: true
