@@ -3,8 +3,10 @@ FROM maven:3.9-eclipse-temurin-25 AS build
 
 WORKDIR /app
 
-# Copy pom.xml and download dependencies (cached layer)
+# Copy pom.xml and configuration files
 COPY pom.xml .
+COPY checkstyle-suppressions.xml .
+COPY maven-version-rules.xml .
 RUN mvn dependency:go-offline -B
 
 # Copy source code and build
