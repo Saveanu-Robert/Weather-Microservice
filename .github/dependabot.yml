@@ -62,6 +62,9 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "org.springframework:*"
         update-types: ["version-update:semver-major"]
+      # SpringDoc 2.8.14 is pinned for Spring Boot 3.5.7 compatibility
+      # Version 3.x requires Spring Boot 4.x
+      - dependency-name: "org.springdoc:*"
     # Increase version requirements
     versioning-strategy: "increase"
 
