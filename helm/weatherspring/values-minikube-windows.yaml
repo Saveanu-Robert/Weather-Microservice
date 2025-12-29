@@ -133,6 +133,10 @@ extraEnv:
     value: "http://localhost:8080"
   - name: OPENAPI_CONTACT_EMAIL
     value: "support@weatherservice.com"
+  - name: ERROR_PROBLEM_BASE_URL
+    value: "https://weatherspring.com/problems"
+  - name: TRACING_SAMPLE_RATE
+    value: "1.0"
 
 ## Zipkin configuration for Minikube
 zipkin:
