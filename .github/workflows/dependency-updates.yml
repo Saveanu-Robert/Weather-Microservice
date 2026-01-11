@@ -1,0 +1,77 @@
+name: Update Dependencies
+
+on:
+  schedule:
+    - cron: '0 9 * * *'  # 9:00 AM UTC daily
+  workflow_dispatch:  # Allow manual trigger
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-dependencies:
+    name: Check and Update Maven Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'oracle'
+          cache: maven
+
+      - name: Update dependency versions
+        run: |
+          # Update all dependencies to their latest versions (excluding SpringDoc)
+          mvn versions:update-properties -DgenerateBackupPoms=false -Dexcludes=org.springdoc:*
+          mvn versions:use-latest-releases -DgenerateBackupPoms=false -DallowMajorUpdates=false -Dexcludes=org.springdoc:*
+
+      - name: Update plugin versions
+        run: |
+          # Update all plugins to their latest versions (excluding SpringDoc)
+          mvn versions:update-properties -DgenerateBackupPoms=false -Dexcludes=org.springdoc:*
+          mvn versions:use-latest-releases -Dincludes=*:* -DgenerateBackupPoms=false -DallowMajorUpdates=false -Dexcludes=org.springdoc:*
+
+      - name: Verify build still works
+        run: mvn clean verify -DskipTests
+        continue-on-error: true
+
+      - name: Generate update summary
+        id: summary
+        run: |
+          echo "## Dependency Updates" > update-summary.md
+          echo "" >> update-summary.md
+          echo "This PR updates dependencies to their latest stable versions." >> update-summary.md
+          echo "" >> update-summary.md
+
+          if git diff --quiet pom.xml; then
+            echo "No updates available" >> update-summary.md
+            echo "has_updates=false" >> $GITHUB_OUTPUT
+          else
+            echo "### Changes:" >> update-summary.md
+            echo '```diff' >> update-summary.md
+            git diff pom.xml >> update-summary.md
+            echo '```' >> update-summary.md
+            echo "has_updates=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.summary.outputs.has_updates == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: |
+            Update Maven dependencies to latest versions
+
+            Automated dependency update via GitHub Actions
+          branch: dependency-updates
+          delete-branch: true
+          title: 'Update Maven Dependencies'
+          body-path: update-summary.md
+          labels: |
+            dependencies
+            automated

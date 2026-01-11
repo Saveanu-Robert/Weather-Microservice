@@ -1,0 +1,106 @@
+# Dependabot configuration for automated dependency updates
+# Documentation: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  # Maven dependencies
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "maven"
+    commit-message:
+      prefix: "build(deps)"
+      include: "scope"
+    # Group minor and patch updates together to reduce PR noise
+    groups:
+      spring-boot:
+        patterns:
+          - "org.springframework.boot:*"
+        update-types:
+          - "minor"
+          - "patch"
+      spring-framework:
+        patterns:
+          - "org.springframework:*"
+        update-types:
+          - "minor"
+          - "patch"
+      testing:
+        patterns:
+          - "org.junit.jupiter:*"
+          - "org.mockito:*"
+          - "org.assertj:*"
+        update-types:
+          - "minor"
+          - "patch"
+      lombok-and-mapstruct:
+        patterns:
+          - "org.projectlombok:*"
+          - "org.mapstruct:*"
+        update-types:
+          - "minor"
+          - "patch"
+      resilience4j:
+        patterns:
+          - "io.github.resilience4j:*"
+        update-types:
+          - "minor"
+          - "patch"
+    # Allow automatic rebasing of PRs
+    rebase-strategy: "auto"
+    # Ignore specific dependencies that require manual review
+    ignore:
+      # Ignore major version updates for stable dependencies
+      - dependency-name: "org.springframework.boot:*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "org.springframework:*"
+        update-types: ["version-update:semver-major"]
+      # SpringDoc 2.8.14 is pinned for Spring Boot 3.5.7 compatibility
+      # Version 3.x requires Spring Boot 4.x - DO NOT AUTO-UPDATE
+      - dependency-name: "org.springdoc:springdoc-openapi-starter-webmvc-ui"
+        update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]
+    # Increase version requirements
+    versioning-strategy: "increase"
+
+  # GitHub Actions updates
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Docker updates (if you add Dockerfiles)
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "build(docker)"
