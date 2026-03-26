@@ -70,3 +70,10 @@ nul
 
 ### Tutorials ###
 /tutorials/
+
+### AI Agents ###
+.claude/
+.serena/
+
+### Generated Files ###
+update-summary.md
