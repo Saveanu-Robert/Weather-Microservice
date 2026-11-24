@@ -18,6 +18,26 @@
 
     <name>Weather Microservice</name>
     <description>Weather microservice with external API integration</description>
+    <url>https://github.com/Saveanu-Robert/Weather-Microservice</url>
+
+    <!-- Declared here so the Spring Boot parent's own project metadata is not inherited. -->
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <id>Saveanu-Robert</id>
+            <name>Robert Saveanu</name>
+            <url>https://github.com/Saveanu-Robert</url>
+        </developer>
+    </developers>
+    <scm>
+        <connection>scm:git:https://github.com/Saveanu-Robert/Weather-Microservice.git</connection>
+        <url>https://github.com/Saveanu-Robert/Weather-Microservice</url>
+    </scm>
 
     <properties>
         <java.version>25</java.version>

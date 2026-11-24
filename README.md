@@ -1,5 +1,6 @@
 # Weather Microservice
 
+[![CI](https://github.com/Saveanu-Robert/Weather-Microservice/actions/workflows/ci.yml/badge.svg)](https://github.com/Saveanu-Robert/Weather-Microservice/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-25%20LTS-orange.svg)](https://openjdk.java.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.7-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -89,6 +90,13 @@ A production-ready RESTful microservice for weather data management built with S
 ---
 
 ## Quick Start
+
+Clone the repository first:
+
+```bash
+git clone https://github.com/Saveanu-Robert/Weather-Microservice.git
+cd Weather-Microservice
+```
 
 ### 1. Get Your API Key
 
@@ -1219,7 +1227,7 @@ pkill -9 java
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 
